@@ -1,6 +1,6 @@
 """
-Document Processing Agent (Free) — Web Server
-Uses Google Gemini Flash (free tier). No API costs.
+Document Processing Agent (Free) - Web Server
+Uses Groq Llama 3.3 70B when GROQ_API_KEY is set.
 """
 
 import os
