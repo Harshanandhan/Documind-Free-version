@@ -1,4 +1,4 @@
-﻿"""
+"""
 Document processor: local PDF/CSV/Excel extract + optional Groq Llama 3.3 structuring.
 Works without GROQ_API_KEY in extract-only mode.
 """
@@ -24,7 +24,7 @@ Format your response cleanly using markdown:
 - Use tables for structured data
 - Use headings to organize sections
 - Use bold for important values
-- Be concise and professional — no filler phrases
+- Be concise and professional - no filler phrases
 
 If multiple documents are provided, process each one and clearly separate the results."""
 
@@ -51,7 +51,7 @@ def _groq_client():
 
 def extract_pdf(path: Path) -> str:
     if not HAS_PDFPLUMBER:
-        return f"[PDF: {path.name} — pdfplumber not installed]"
+        return f"[PDF: {path.name} - pdfplumber not installed]"
     lines = []
     with pdfplumber.open(str(path)) as pdf:
         for i, page in enumerate(pdf.pages):
@@ -67,7 +67,7 @@ def extract_pdf(path: Path) -> str:
 
 def extract_csv_excel(path: Path) -> str:
     if not HAS_PANDAS:
-        return f"[{path.name} — pandas not installed]"
+        return f"[{path.name} - pandas not installed]"
     ext = path.suffix.lower()
     if ext == ".csv":
         df = pd.read_csv(str(path))
@@ -91,7 +91,7 @@ def extract_all(files: list[Path]) -> str:
 
         if ext in img_exts:
             parts.append(
-                f"[Image file: {path.name} — no OCR in this free demo. "
+                f"[Image file: {path.name} - no OCR in this free demo. "
                 "Please upload PDF, CSV, or Excel instead.]"
             )
         elif ext == ".pdf":
@@ -115,7 +115,7 @@ def process_documents(files: list[Path], task: str) -> str:
         # Honest extract-only mode for portfolio demos without secrets
         header = (
             "## Extract-only mode\n\n"
-            "_No `GROQ_API_KEY` configured — showing local text/table extraction. "
+            "_No `GROQ_API_KEY` configured - showing local text/table extraction. "
             "Set `GROQ_API_KEY` on the host to enable Llama 3.3 structuring._\n\n"
             f"**Your task (noted):** {task}\n\n---\n"
         )
