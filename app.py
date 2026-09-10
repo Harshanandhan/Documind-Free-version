@@ -1,6 +1,6 @@
-"""
+﻿"""
 Document Processing Agent (Free) - Web Server
-Uses Groq Llama 3.3 70B when GROQ_API_KEY is set.
+Uses Groq Llama 3.3 70B when GROQ_API_KEY is set; otherwise extract-only.
 """
 
 import os
@@ -62,7 +62,11 @@ async def process(
             lambda: process_documents(saved, task)
         )
 
-        return JSONResponse({"status": "ok", "result": result})
+        return JSONResponse({
+            "status": "ok",
+            "result": result,
+            "mode": "llm" if os.environ.get("GROQ_API_KEY") else "extract-only",
+        })
 
     except Exception as e:
         return JSONResponse({"status": "error", "result": str(e)}, status_code=500)
@@ -73,7 +77,13 @@ async def process(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": "llama-3.3-70b-versatile", "api_key_set": bool(os.environ.get("GROQ_API_KEY"))}
+    key_set = bool((os.environ.get("GROQ_API_KEY") or "").strip())
+    return {
+        "status": "ok",
+        "model": "llama-3.3-70b-versatile",
+        "api_key_set": key_set,
+        "mode": "llm" if key_set else "extract-only",
+    }
 
 
 static_dir = Path(__file__).parent / "static"

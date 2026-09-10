@@ -1,13 +1,10 @@
-"""
-Document processor using Groq (free tier) — Llama 3.3 70B.
-Extracts content from PDFs, CSV, Excel, then sends to Groq.
+﻿"""
+Document processor: local PDF/CSV/Excel extract + optional Groq Llama 3.3 structuring.
+Works without GROQ_API_KEY in extract-only mode.
 """
 
 import os
 from pathlib import Path
-from groq import Groq
-
-client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 
 MODEL = "llama-3.3-70b-versatile"
 
@@ -44,6 +41,14 @@ except ImportError:
     HAS_PANDAS = False
 
 
+def _groq_client():
+    key = (os.environ.get("GROQ_API_KEY") or "").strip()
+    if not key:
+        return None
+    from groq import Groq
+    return Groq(api_key=key)
+
+
 def extract_pdf(path: Path) -> str:
     if not HAS_PDFPLUMBER:
         return f"[PDF: {path.name} — pdfplumber not installed]"
@@ -76,7 +81,7 @@ def extract_csv_excel(path: Path) -> str:
         return "\n\n".join(result)
 
 
-def process_documents(files: list[Path], task: str) -> str:
+def extract_all(files: list[Path]) -> str:
     img_exts = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp"}
     parts = []
 
@@ -85,27 +90,45 @@ def process_documents(files: list[Path], task: str) -> str:
         parts.append(f"\n### Document: {path.name}\n")
 
         if ext in img_exts:
-            parts.append(f"[Image file: {path.name} — text extraction not available for images. Please upload PDF or CSV instead.]")
-
+            parts.append(
+                f"[Image file: {path.name} — no OCR in this free demo. "
+                "Please upload PDF, CSV, or Excel instead.]"
+            )
         elif ext == ".pdf":
             parts.append(extract_pdf(path))
-
         elif ext in {".csv", ".xlsx", ".xls", ".xlsm"}:
             parts.append(extract_csv_excel(path))
-
         else:
             try:
                 parts.append(path.read_text(encoding="utf-8", errors="replace")[:4000])
             except Exception:
                 parts.append(f"[Could not read {path.name}]")
 
-    full_content = "\n".join(parts) + f"\n\n---\n**Task:** {task}"
+    return "\n".join(parts)
 
+
+def process_documents(files: list[Path], task: str) -> str:
+    extracted = extract_all(files)
+    client = _groq_client()
+
+    if client is None:
+        # Honest extract-only mode for portfolio demos without secrets
+        header = (
+            "## Extract-only mode\n\n"
+            "_No `GROQ_API_KEY` configured — showing local text/table extraction. "
+            "Set `GROQ_API_KEY` on the host to enable Llama 3.3 structuring._\n\n"
+            f"**Your task (noted):** {task}\n\n---\n"
+        )
+        if not files:
+            return header + "_No files uploaded. Drop a PDF, CSV, or Excel file and try again._"
+        return header + extracted
+
+    full_content = extracted + f"\n\n---\n**Task:** {task}"
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": full_content}
+            {"role": "user", "content": full_content},
         ],
         max_tokens=4096,
     )
